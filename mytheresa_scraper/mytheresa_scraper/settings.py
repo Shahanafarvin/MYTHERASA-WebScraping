@@ -1,4 +1,4 @@
-BOT_NAME = "mytheresa_scraper"
+BOT_NAME = "mytheresa"
 
 SPIDER_MODULES = ["mytheresa_scraper.spiders"]
 NEWSPIDER_MODULE = "mytheresa_scraper.spiders"
@@ -49,6 +49,11 @@ DOWNLOADER_MIDDLEWARES = {
     'mytheresa_scraper.middlewares.RotateUserAgentMiddleware': 400,
     'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,  # disable default
 }
+PLAYWRIGHT_LAUNCH_OPTIONS = {"headless": False}
+PLAYWRIGHT_BROWSER_TYPE = "chromium"
 
-
-HTTP_PROXY = "scraperapi:458fa92f5567092c5d9d9f6e863ed38d@proxy-server.scraperapi.com:8001"
+DOWNLOAD_HANDLERS = {
+    "http": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+    "https": "scrapy_playwright.handler.ScrapyPlaywrightDownloadHandler",
+}
+TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"

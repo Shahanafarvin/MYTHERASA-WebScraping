@@ -1,27 +1,40 @@
 import scrapy
+from scrapy_playwright.page import PageMethod
 
-class MytheresaSpider(scrapy.Spider):
+class MyTheresaSpider(scrapy.Spider):
     name = "mytheresa"
     allowed_domains = ["mytheresa.com"]
     start_urls = ["https://www.mytheresa.com/int/en/men/shoes"]
 
-    def parse(self, response):
-        print(f"\n🔍 Response status code: {response.status}")
+    def start_requests(self):
+        yield scrapy.Request(
+            url=self.start_urls[0],
+            meta={
+                "playwright": True,
+                "playwright_include_page": True,
+                "playwright_page_methods": [
+                    PageMethod("wait_for_selector", "a.item__link"),
+                ],
+            },
+            callback=self.parse,
+        )
 
-        # Debug: Print a slice of the HTML to detect bot blocks
-        print("\n--- HTML Preview ---")
-        print(response.text[:3000])
+    async def parse(self, response):
+        page = response.meta["playwright_page"]
 
-        # Extract product URLs from anchor tags
-        links = response.css('a.item__link::attr(href)').getall()
-        product_links = [
-            "https://www.mytheresa.com" + link
-            for link in links
-            if link.startswith("/")
-        ]
+        # Click "Show more" repeatedly until it's gone
+        while await page.query_selector("a.button.button--active"):
+            await page.click("a.button.button--active")
+            await page.wait_for_timeout(1500)  # wait for new items to load
 
-        print("\n✅ Product Links:")
+        html = await page.content()
+        response = response.replace(body=html)
+
+        # Extract product URLs
+        links = response.css("a.item__link::attr(href)").getall()
+        product_links = ["https://www.mytheresa.com" + l for l in links if l.startswith("/")]
+
         for url in product_links:
-            print(url)
+            yield {"url": url}
 
-        print(f"\n🔢 Total links scraped: {len(product_links)}")
+        await page.close()
