@@ -6,20 +6,22 @@ class MytheresaSpider(scrapy.Spider):
     start_urls = ["https://www.mytheresa.com/int/en/men/shoes"]
 
     def parse(self, response):
-        # Print response status
-        print(f"\nResponse status code: {response.status}")
+        print(f"\n🔍 Response status code: {response.status}")
 
-        # Print raw HTML (first 5000 characters)
-        print("\n--- RESPONSE HTML (truncated) ---")
-        print(response.text[:5000])
+        # Debug: Print a slice of the HTML to detect bot blocks
+        print("\n--- HTML Preview ---")
+        print(response.text[:3000])
 
-        # Extract product URLs
-        links = response.css('a.link__item::attr(href)').getall()
-        product_links = ["https://www.mytheresa.com" + link for link in links if link.startswith("/")]
+        # Extract product URLs from anchor tags
+        links = response.css('a.item__link::attr(href)').getall()
+        product_links = [
+            "https://www.mytheresa.com" + link
+            for link in links
+            if link.startswith("/")
+        ]
 
-        # Print product URLs
-        print("\n--- PRODUCT LINKS ---")
+        print("\n✅ Product Links:")
         for url in product_links:
             print(url)
 
-        print(f"\nTotal product links scraped: {len(product_links)}")
+        print(f"\n🔢 Total links scraped: {len(product_links)}")
