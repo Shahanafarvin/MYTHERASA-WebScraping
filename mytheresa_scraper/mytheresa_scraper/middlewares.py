@@ -99,23 +99,4 @@ class MytheresaScraperDownloaderMiddleware:
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
 
-import random
 
-class RotateUserAgentMiddleware:
-    def __init__(self, user_agents):
-        self.user_agents = user_agents
-
-    @classmethod
-    def from_crawler(cls, crawler):
-        return cls(
-            user_agents=crawler.settings.getlist('USER_AGENTS')
-        )
-
-    def process_request(self, request, spider):
-        ua = random.choice(self.user_agents)
-        request.headers['User-Agent'] = ua
-
-        # Add proxy if defined
-        proxy = spider.settings.get('HTTP_PROXY')
-        if proxy:
-            request.meta['proxy'] = "http://" + proxy

@@ -1,40 +1,44 @@
 import scrapy
-from scrapy_playwright.page import PageMethod
+from scrapy.http import JsonRequest
 
-class MyTheresaSpider(scrapy.Spider):
-    name = "mytheresa"
+
+class ApiSpider(scrapy.Spider):
+    name = "api_spider"
     allowed_domains = ["mytheresa.com"]
-    start_urls = ["https://www.mytheresa.com/int/en/men/shoes"]
+    start_page = 1
+    end_page = 31 
 
     def start_requests(self):
-        yield scrapy.Request(
-            url=self.start_urls[0],
-            meta={
-                "playwright": True,
-                "playwright_include_page": True,
-                "playwright_page_methods": [
-                    PageMethod("wait_for_selector", "a.item__link"),
-                ],
-            },
-            callback=self.parse,
-        )
+        for page in range(self.start_page, self.end_page + 1):
+            payload = {
+                "query": """
+                query XProductListingPageQuery($page: Int, $size: Int, $slug: String) {
+                  xProductListingPage(page: $page, size: $size, slug: $slug) {
+                    products {
+                      slug
+                    }
+                  }
+                }
+                """,
+                "variables": {
+                    "page": page,
+                    "size": 60,
+                    "slug": "/shoes"
+                }
+            }
 
-    async def parse(self, response):
-        page = response.meta["playwright_page"]
+            yield JsonRequest(
+                url="https://api.mytheresa.com/api",
+                method="POST",
+                data=payload,
+                callback=self.parse
+            )
 
-        # Click "Show more" repeatedly until it's gone
-        while await page.query_selector("a.button.button--active"):
-            await page.click("a.button.button--active")
-            await page.wait_for_timeout(1500)  # wait for new items to load
-
-        html = await page.content()
-        response = response.replace(body=html)
-
-        # Extract product URLs
-        links = response.css("a.item__link::attr(href)").getall()
-        product_links = ["https://www.mytheresa.com" + l for l in links if l.startswith("/")]
-
-        for url in product_links:
-            yield {"url": url}
-
-        await page.close()
+    def parse(self, response):
+        products = response.json()["data"]["xProductListingPage"]["products"]
+        for product in products:
+            slug = product.get("slug")
+            if slug:
+                yield {
+                    "product_url": f"https://www.mytheresa.com/int/en/men{slug}"
+                }
